@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, TextInput } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Theme } from '../theme/theme';
 import { ChannelBadge } from '../components/ChannelBadge';
 import { StatusBadge } from '../components/StatusBadge';
 import { api } from '../utils/api';
+import { safeAlert } from '../utils/alerts';
 
 export const ConversationDetailScreen: React.FC<{ route: any, navigation: any }> = ({ route, navigation }) => {
   const { id } = route.params;
@@ -42,16 +43,16 @@ export const ConversationDetailScreen: React.FC<{ route: any, navigation: any }>
     setResolving(false);
 
     if (result && result.status) {
-      Alert.alert("Success", "Escalation resolved and status updated.");
+      safeAlert("Success", "Escalation resolved and status updated.");
       fetchHistory(false);
     } else {
-      Alert.alert("Error", "Could not resolve escalation. Please try again.");
+      safeAlert("Error", "Could not resolve escalation. Please try again.");
     }
   };
 
   const handleScheduleFollowup = async () => {
     if (delay <= 0) {
-      Alert.alert("Validation Error", "Please specify a positive delay.");
+      safeAlert("Validation Error", "Please specify a positive delay.");
       return;
     }
 
@@ -60,16 +61,16 @@ export const ConversationDetailScreen: React.FC<{ route: any, navigation: any }>
     setScheduling(false);
 
     if (result && result.id) {
-      Alert.alert("Follow-up Scheduled", `A reminder has been registered for this customer in ${delay} minutes.`);
+      safeAlert("Follow-up Scheduled", `A reminder has been registered for this customer in ${delay} minutes.`);
       setTemplate('');
       fetchHistory(false);
     } else {
-      Alert.alert("Error", "Failed to schedule follow-up. Check API connectivity.");
+      safeAlert("Error", "Failed to schedule follow-up. Check API connectivity.");
     }
   };
 
   const handleCopySuggested = (response: string) => {
-    Alert.alert("Response Copied", "Suggested SOP response has been copied to your clipboard.");
+    safeAlert("Response Copied", "Suggested SOP response has been copied to your clipboard.");
   };
 
   const formatDate = (isoStr: string) => {

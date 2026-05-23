@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Theme } from '../theme/theme';
 import { Header } from '../components/Header';
 import { ChannelBadge } from '../components/ChannelBadge';
 import { api } from '../utils/api';
+import { safeAlert } from '../utils/alerts';
 
 export const EscalationsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [escalations, setEscalations] = useState<any[]>([]);
@@ -60,7 +61,7 @@ export const EscalationsScreen: React.FC<{ navigation: any }> = ({ navigation })
   };
 
   const handleResolve = async (enquiryId: string, customer: string) => {
-    Alert.alert(
+    safeAlert(
       "Resolve Escalation",
       `Are you sure you want to resolve this escalation for ${customer}?`,
       [
@@ -70,7 +71,7 @@ export const EscalationsScreen: React.FC<{ navigation: any }> = ({ navigation })
           onPress: async () => {
             const result = await api.resolveEscalation(enquiryId);
             if (result && result.status) {
-              Alert.alert("Success", "Escalation resolved and customer notified.");
+              safeAlert("Success", "Escalation resolved and customer notified.");
               fetchEscalations(false);
             }
           } 

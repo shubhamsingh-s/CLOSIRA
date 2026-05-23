@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Theme } from '../theme/theme';
 import { Header } from '../components/Header';
 import { api } from '../utils/api';
+import { safeAlert } from '../utils/alerts';
 
 export const FollowUpsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [followups, setFollowups] = useState<any[]>([]);
@@ -49,7 +50,7 @@ export const FollowUpsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
   };
 
   const handleMarkAsDone = async (followupId: string, customer: string) => {
-    Alert.alert(
+    safeAlert(
       "Complete Follow-up",
       `Mark this scheduled message for ${customer} as sent?`,
       [
@@ -59,7 +60,7 @@ export const FollowUpsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
           onPress: async () => {
             const result = await api.completeFollowup(followupId);
             if (result && result.status) {
-              Alert.alert("Completed", "Follow-up message marked as dispatched.");
+              safeAlert("Completed", "Follow-up message marked as dispatched.");
               fetchFollowups(false);
             }
           } 

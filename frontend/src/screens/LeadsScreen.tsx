@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, ActivityIndicator, Alert, Pressable, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, ActivityIndicator, Pressable, RefreshControl, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Theme } from '../theme/theme';
 import { Header } from '../components/Header';
 import { ChannelBadge } from '../components/ChannelBadge';
 import { StatusBadge } from '../components/StatusBadge';
 import { api } from '../utils/api';
+import { safeAlert } from '../utils/alerts';
 
 export const LeadsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [enquiries, setEnquiries] = useState<any[]>([]);
@@ -44,7 +45,7 @@ export const LeadsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
   const handleCreateLead = async () => {
     if (!customerName.trim() || !message.trim()) {
-      Alert.alert("Validation Error", "Please fill in all the fields.");
+      safeAlert("Validation Error", "Please fill in all the fields.");
       return;
     }
 
@@ -53,7 +54,7 @@ export const LeadsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     setSubmitting(false);
 
     if (result && result.enquiry_id) {
-      Alert.alert(
+      safeAlert(
         "Lead Created", 
         "The enquiry was queued successfully. The background worker is triaging it now.",
         [{ text: "OK", onPress: () => {
@@ -65,7 +66,7 @@ export const LeadsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         }}]
       );
     } else {
-      Alert.alert("Error", "Could not create lead. Please check backend server connection.");
+      safeAlert("Error", "Could not create lead. Please check backend server connection.");
     }
   };
 

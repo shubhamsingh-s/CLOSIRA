@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated, TouchableWithoutFeedback, Platform, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, TouchableWithoutFeedback, Platform, RefreshControl, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { Theme } from '../theme/theme';
 import { Header } from '../components/Header';
 import { api } from '../utils/api';
+import { safeAlert } from '../utils/alerts';
 
 const AnimatedCard: React.FC<{ children: React.ReactNode; onPress: () => void; style: any }> = ({ children, onPress, style }) => {
   const scale = useRef(new Animated.Value(1)).current;
@@ -91,7 +92,7 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
 
     const randomTemplate = simulationTemplates[Math.floor(Math.random() * simulationTemplates.length)];
 
-    Alert.alert(
+    safeAlert(
       "Simulate Inbound Lead",
       `Simulate inbound ${randomTemplate.channel} enquiry from ${randomTemplate.name}?`,
       [
@@ -104,7 +105,7 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
             setSimulating(false);
             
             if (result && result.enquiry_id) {
-              Alert.alert(
+              safeAlert(
                 "Lead Generated", 
                 `New lead queued. Message: "${randomTemplate.message.substring(0, 40)}..."`,
                 [{ text: "View Leads", onPress: () => {
@@ -238,7 +239,7 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
 
             <TouchableOpacity 
               style={[styles.actionButton, styles.actionSecondary]} 
-              onPress={() => Alert.alert("Export Logs", "Exporting system events to CSV...")}
+              onPress={() => safeAlert("Export Logs", "Exporting system events to CSV...")}
               activeOpacity={0.8}
             >
               <Feather name="download" size={16} color={Theme.colors.textPrimary} style={styles.actionIcon} />

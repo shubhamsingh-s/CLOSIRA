@@ -14,7 +14,9 @@ export const api = {
     try {
       const response = await fetch(`${BASE_URL}/enquiry`);
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        localEnquiries = data;
+        return data;
       }
     } catch (e) {
       console.warn("Backend server down or unreachable, falling back to mock enquiries");
@@ -34,7 +36,33 @@ export const api = {
         })
       });
       if (response.ok) {
-        return await response.json();
+        const result = await response.json();
+        // Warm up local cache with the newly created enquiry
+        const newEnq = {
+          id: result.enquiry_id,
+          customer_name: customerName,
+          channel: channel,
+          status: 'new',
+          message: message,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        localEnquiries = [newEnq, ...localEnquiries];
+        localHistories[result.enquiry_id] = {
+          enquiry: newEnq,
+          sop_matches: [],
+          followups: [],
+          events: [
+            {
+              id: `evt_1_${result.enquiry_id}`,
+              enquiry_id: result.enquiry_id,
+              event_type: "enquiry_created",
+              payload: { channel, customer_name: customerName },
+              created_at: new Date().toISOString()
+            }
+          ]
+        };
+        return result;
       }
     } catch (e) {
       console.warn("Backend server down or unreachable, simulating mock creation");
@@ -159,7 +187,9 @@ export const api = {
     try {
       const response = await fetch(`${BASE_URL}/enquiry/${id}/history`);
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        localHistories[id] = data;
+        return data;
       }
     } catch (e) {
       console.warn(`Backend server down or unreachable, falling back to mock history for ${id}`);
@@ -252,7 +282,9 @@ export const api = {
     try {
       const response = await fetch(`${BASE_URL}/followup`);
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        localFollowups = data;
+        return data;
       }
     } catch (e) {
       console.warn("Backend server down or unreachable, falling back to mock followups");
