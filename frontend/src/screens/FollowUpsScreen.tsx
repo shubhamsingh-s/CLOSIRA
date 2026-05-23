@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { Theme } from '../theme/theme';
 import { Header } from '../components/Header';
 import mockData from '../mock/mockData.json';
@@ -29,55 +30,82 @@ export const FollowUpsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
     );
   };
 
-  const renderItem = ({ item }: { item: typeof followups[0] }) => (
-    <TouchableOpacity 
-      style={styles.card}
-      activeOpacity={0.7}
-      onPress={() => navigation.navigate('ConversationDetail', { id: item.enquiry_id })}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={styles.customerName}>{item.customer_name}</Text>
-        <View style={styles.dueContainer}>
-          <Text style={styles.dueLabel}>Due At: </Text>
-          <Text style={styles.dueTime}>{formatDate(item.due_time)}</Text>
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
+  const renderItem = ({ item }: { item: typeof followups[0] }) => {
+    const initials = getInitials(item.customer_name);
+
+    return (
+      <TouchableOpacity 
+        style={styles.card}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('ConversationDetail', { id: item.enquiry_id })}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.avatarRow}>
+            <View style={[styles.avatarCircle, { backgroundColor: Theme.colors.primary }]}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
+            <View style={styles.nameContainer}>
+              <Text style={styles.customerName}>{item.customer_name}</Text>
+              <View style={styles.dueContainer}>
+                <Feather name="clock" size={12} color={Theme.colors.warning} style={{ marginRight: 4 }} />
+                <Text style={styles.dueLabel}>Due At: </Text>
+                <Text style={styles.dueTime}>{formatDate(item.due_time)}</Text>
+              </View>
+            </View>
+          </View>
         </View>
-      </View>
 
-      <Text style={styles.previewLabel}>Message Preview:</Text>
-      <Text style={styles.previewText} numberOfLines={3}>
-        "{item.message_preview}"
-      </Text>
+        <Text style={styles.previewLabel}>Message Preview:</Text>
+        <Text style={styles.previewText} numberOfLines={3}>
+          "{item.message_preview}"
+        </Text>
 
-      <View style={styles.footer}>
-        <View style={styles.delayContainer}>
-          <Text style={styles.delayText}>Scheduled {item.delay_in_minutes}m delay</Text>
+        <View style={styles.footer}>
+          <View style={styles.delayContainer}>
+            <Text style={styles.delayText}>Scheduled {item.delay_in_minutes}m delay</Text>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.doneButton}
+            onPress={() => handleMarkAsDone(item.id, item.customer_name)}
+          >
+            <Feather name="check" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
+            <Text style={styles.doneButtonText}>Mark as Sent</Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity 
-          style={styles.doneButton}
-          onPress={() => handleMarkAsDone(item.id, item.customer_name)}
-        >
-          <Text style={styles.doneButtonText}>Mark as Sent</Text>
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <Header title="Follow-up Tasks" subtitle="Send reminders and execute scheduled updates" />
-      <FlatList
-        data={followups}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>All caught up!</Text>
-            <Text style={styles.emptySubtitle}>No pending follow-ups scheduled.</Text>
-          </View>
-        }
-      />
+      <View style={styles.contentWrapper}>
+        <FlatList
+          data={followups}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconCircle}>
+                <Feather name="check-circle" size={32} color={Theme.colors.success} />
+              </View>
+              <Text style={styles.emptyTitle}>All caught up!</Text>
+              <Text style={styles.emptySubtitle}>No pending follow-ups scheduled.</Text>
+            </View>
+          }
+        />
+      </View>
     </View>
   );
 };
@@ -87,17 +115,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Theme.colors.background,
   },
+  contentWrapper: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 1400,
+    alignSelf: 'center',
+  },
   listContent: {
     padding: Theme.spacing.lg,
     paddingBottom: Theme.spacing.xxl,
   },
   card: {
     backgroundColor: Theme.colors.card,
-    borderRadius: 12,
-    padding: Theme.spacing.md,
+    borderRadius: 14,
+    padding: Theme.spacing.lg,
     marginBottom: Theme.spacing.md,
     borderWidth: 1,
-    borderColor: Theme.colors.border,
+    borderColor: 'rgba(51, 65, 85, 0.4)',
     ...Theme.shadows.sm,
   },
   cardHeader: {
@@ -106,13 +140,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Theme.spacing.md,
   },
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Theme.spacing.md,
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  nameContainer: {
+    justifyContent: 'center',
+  },
   customerName: {
     ...Theme.typography.titleMedium,
     fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   dueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 2,
   },
   dueLabel: {
     ...Theme.typography.caption,
@@ -163,23 +220,35 @@ const styles = StyleSheet.create({
     backgroundColor: Theme.colors.success,
     paddingHorizontal: Theme.spacing.md,
     paddingVertical: Theme.spacing.sm - 2,
-    borderRadius: 6,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
     ...Theme.shadows.sm,
   },
   doneButtonText: {
     ...Theme.typography.caption,
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: Theme.spacing.xxl * 2,
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Theme.spacing.lg,
   },
   emptyTitle: {
     ...Theme.typography.titleMedium,
     fontSize: 18,
     color: Theme.colors.success,
     marginBottom: Theme.spacing.xs,
+    fontWeight: '700',
   },
   emptySubtitle: {
     ...Theme.typography.bodyMedium,

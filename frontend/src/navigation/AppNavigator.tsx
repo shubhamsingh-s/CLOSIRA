@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
+import { Feather } from '@expo/vector-icons';
 import { Theme } from '../theme/theme';
 
 // Import Screens
@@ -14,13 +15,8 @@ import { ConversationDetailScreen } from '../screens/ConversationDetailScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Simple mock icon component since we are stylesheet-based
-const TabIcon = ({ color, label }: { color: string; label: string }) => {
-  return (
-    <View style={{ alignItems: 'center', justifyContent: 'center', marginTop: 4 }}>
-      <Text style={{ color, fontSize: 10, fontWeight: '700' }}>●</Text>
-    </View>
-  );
+const TabIcon = ({ name, color }: { name: string; color: string }) => {
+  return <Feather name={name as any} size={20} color={color} />;
 };
 
 const TabNavigator = () => {
@@ -33,12 +29,15 @@ const TabNavigator = () => {
         tabBarStyle: {
           backgroundColor: Theme.colors.card,
           borderTopColor: Theme.colors.border,
-          height: 60,
-          paddingBottom: 8,
+          height: Platform.OS === 'ios' ? 88 : 70,
+          paddingBottom: Platform.OS === 'ios' ? 30 : 12,
+          paddingTop: 10,
+          ...Theme.shadows.md,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
+          fontSize: 11,
+          fontWeight: '700',
+          marginTop: 4,
         },
       }}
     >
@@ -46,28 +45,28 @@ const TabNavigator = () => {
         name="Home" 
         component={DashboardScreen} 
         options={{
-          tabBarIcon: ({ color }) => <TabIcon color={color} label="H" />,
+          tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
         }}
       />
       <Tab.Screen 
         name="Leads" 
         component={LeadsScreen} 
         options={{
-          tabBarIcon: ({ color }) => <TabIcon color={color} label="L" />,
+          tabBarIcon: ({ color }) => <TabIcon name="users" color={color} />,
         }}
       />
       <Tab.Screen 
         name="Escalations" 
         component={EscalationsScreen} 
         options={{
-          tabBarIcon: ({ color }) => <TabIcon color={color} label="E" />,
+          tabBarIcon: ({ color }) => <TabIcon name="alert-triangle" color={color} />,
         }}
       />
       <Tab.Screen 
         name="Follow-ups" 
         component={FollowUpsScreen} 
         options={{
-          tabBarIcon: ({ color }) => <TabIcon color={color} label="F" />,
+          tabBarIcon: ({ color }) => <TabIcon name="clock" color={color} />,
         }}
       />
     </Tab.Navigator>

@@ -9,29 +9,41 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+    <View style={styles.outerContainer}>
+      <View style={styles.innerContainer}>
+        <Text style={styles.title}>{title}</Text>
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: Theme.spacing.lg,
-    paddingTop: Theme.spacing.lg,
-    paddingBottom: Theme.spacing.md,
+  outerContainer: {
+    width: '100%',
     backgroundColor: Theme.colors.background,
     borderBottomWidth: 1,
     borderBottomColor: Theme.colors.border,
   },
+  innerContainer: {
+    width: '100%',
+    maxWidth: 1400,
+    alignSelf: 'center',
+    paddingHorizontal: Theme.spacing.lg,
+    paddingTop: Theme.spacing.xl + 4,
+    paddingBottom: Theme.spacing.md + 4,
+  },
   title: {
     ...Theme.typography.titleLarge,
-    fontSize: 22,
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   subtitle: {
     ...Theme.typography.bodyMedium,
     marginTop: Theme.spacing.xs - 2,
     color: Theme.colors.textSecondary,
+    fontSize: 14,
+    opacity: 0.7,
   },
 });
