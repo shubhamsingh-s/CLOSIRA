@@ -1,19 +1,54 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Theme } from '../theme/theme';
 import { Header } from '../components/Header';
-import mockData from '../mock/mockData.json';
+import { api } from '../utils/api';
 
 export const FollowUpsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
-  const [followups, setFollowups] = useState(mockData.followups);
+  const [followups, setFollowups] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const formatDate = (isoStr: string) => {
-    const d = new Date(isoStr);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const fetchFollowups = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
+    const data = await api.getFollowups();
+    // Filter pending follow-ups
+    const pendingList = data.filter((f: any) => f.status === 'pending');
+    
+    // Map with simulated customer names/previews if backend returns relational entities
+    const resolvedFollowups = pendingList.map((item: any) => {
+      return {
+        id: item.id,
+        enquiry_id: item.enquiry_id,
+        customer_name: item.customer_name || "Valued Customer",
+        delay_in_minutes: item.delay_in_minutes,
+        message_preview: item.message_template || "Follow-up reminder checking back on customer request.",
+        status: item.status,
+        due_time: item.scheduled_for
+      };
+    });
+
+    setFollowups(resolvedFollowups);
+    setLoading(false);
   };
 
-  const handleMarkAsDone = (followupId: string, customer: string) => {
+  useEffect(() => {
+    fetchFollowups();
+
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchFollowups(false);
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchFollowups(false);
+    setRefreshing(false);
+  };
+
+  const handleMarkAsDone = async (followupId: string, customer: string) => {
     Alert.alert(
       "Complete Follow-up",
       `Mark this scheduled message for ${customer} as sent?`,
@@ -21,9 +56,12 @@ export const FollowUpsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
         { text: "Cancel", style: "cancel" },
         { 
           text: "Confirm", 
-          onPress: () => {
-            setFollowups(prev => prev.filter(item => item.id !== followupId));
-            Alert.alert("Completed", "Follow-up message dispatched successfully.");
+          onPress: async () => {
+            const result = await api.completeFollowup(followupId);
+            if (result && result.status) {
+              Alert.alert("Completed", "Follow-up message marked as dispatched.");
+              fetchFollowups(false);
+            }
           } 
         }
       ]
@@ -39,7 +77,12 @@ export const FollowUpsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
       .substring(0, 2);
   };
 
-  const renderItem = ({ item }: { item: typeof followups[0] }) => {
+  const formatDate = (isoStr: string) => {
+    const d = new Date(isoStr);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
+  const renderItem = ({ item }: { item: any }) => {
     const initials = getInitials(item.customer_name);
 
     return (
@@ -89,23 +132,33 @@ export const FollowUpsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
   return (
     <View style={styles.container}>
       <Header title="Follow-up Tasks" subtitle="Send reminders and execute scheduled updates" />
-      <View style={styles.contentWrapper}>
-        <FlatList
-          data={followups}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIconCircle}>
-                <Feather name="check-circle" size={32} color={Theme.colors.success} />
+      
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Theme.colors.primary} />
+        </View>
+      ) : (
+        <View style={styles.contentWrapper}>
+          <FlatList
+            data={followups}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Theme.colors.primaryLight} />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIconCircle}>
+                  <Feather name="check-circle" size={32} color={Theme.colors.success} />
+                </View>
+                <Text style={styles.emptyTitle}>All caught up!</Text>
+                <Text style={styles.emptySubtitle}>No pending follow-ups scheduled.</Text>
               </View>
-              <Text style={styles.emptyTitle}>All caught up!</Text>
-              <Text style={styles.emptySubtitle}>No pending follow-ups scheduled.</Text>
-            </View>
-          }
-        />
-      </View>
+            }
+          />
+        </View>
+      )}
     </View>
   );
 };
@@ -120,6 +173,11 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 1400,
     alignSelf: 'center',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   listContent: {
     padding: Theme.spacing.lg,

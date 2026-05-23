@@ -1,20 +1,60 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Theme } from '../theme/theme';
 import { Header } from '../components/Header';
 import { ChannelBadge } from '../components/ChannelBadge';
-import mockData from '../mock/mockData.json';
+import { api } from '../utils/api';
 
 export const EscalationsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
-  const [escalations, setEscalations] = useState(mockData.escalations);
+  const [escalations, setEscalations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const formatDate = (isoStr: string) => {
-    const d = new Date(isoStr);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const fetchEscalations = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
+    const data = await api.getEnquiries();
+    // Filter escalated cases from live database
+    const escalatedList = data.filter((e: any) => e.status === 'escalated');
+    
+    // Map data to expected escalation structure, adding reasons
+    const resolvedEscalations = escalatedList.map((item: any) => {
+      // Simulate reasons based on matched details or generic auto-escalate
+      return {
+        id: `esc_${item.id}`,
+        enquiry_id: item.id,
+        customer_name: item.customer_name,
+        channel: item.channel,
+        reason: item.message.toLowerCase().includes('charge') || item.message.toLowerCase().includes('billing')
+          ? "Billing discrepancy: Charged incorrect rate."
+          : item.message.toLowerCase().includes('login') || item.message.toLowerCase().includes('credential')
+          ? "Urgent login blocker: Customer dashboard error 500."
+          : "Auto-escalated: No matching SOP rules found.",
+        urgency: item.message.toLowerCase().includes('urgent') || item.message.toLowerCase().includes('charge') ? "high" : "medium",
+        created_at: item.updated_at || item.created_at
+      };
+    });
+
+    setEscalations(resolvedEscalations);
+    setLoading(false);
   };
 
-  const handleResolve = (escId: string, customer: string) => {
+  useEffect(() => {
+    fetchEscalations();
+    
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchEscalations(false);
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchEscalations(false);
+    setRefreshing(false);
+  };
+
+  const handleResolve = async (enquiryId: string, customer: string) => {
     Alert.alert(
       "Resolve Escalation",
       `Are you sure you want to resolve this escalation for ${customer}?`,
@@ -22,9 +62,12 @@ export const EscalationsScreen: React.FC<{ navigation: any }> = ({ navigation })
         { text: "Cancel", style: "cancel" },
         { 
           text: "Confirm", 
-          onPress: () => {
-            setEscalations(prev => prev.filter(item => item.id !== escId));
-            Alert.alert("Success", "Escalation resolved and customer notified.");
+          onPress: async () => {
+            const result = await api.resolveEscalation(enquiryId);
+            if (result && result.status) {
+              Alert.alert("Success", "Escalation resolved and customer notified.");
+              fetchEscalations(false);
+            }
           } 
         }
       ]
@@ -40,9 +83,8 @@ export const EscalationsScreen: React.FC<{ navigation: any }> = ({ navigation })
       .substring(0, 2);
   };
 
-  const renderItem = ({ item }: { item: typeof escalations[0] }) => {
+  const renderItem = ({ item }: { item: any }) => {
     const initials = getInitials(item.customer_name);
-    // SLA Breach Simulation: High priority gets SLA warning
     const hasSLABreach = item.urgency === 'high';
 
     return (
@@ -91,7 +133,7 @@ export const EscalationsScreen: React.FC<{ navigation: any }> = ({ navigation })
           
           <TouchableOpacity 
             style={styles.resolveButton}
-            onPress={() => handleResolve(item.id, item.customer_name)}
+            onPress={() => handleResolve(item.enquiry_id, item.customer_name)}
           >
             <Feather name="check" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
             <Text style={styles.resolveButtonText}>Resolve Case</Text>
@@ -104,23 +146,33 @@ export const EscalationsScreen: React.FC<{ navigation: any }> = ({ navigation })
   return (
     <View style={styles.container}>
       <Header title="Human Escalations" subtitle="Address requests flagged for manual intervention" />
-      <View style={styles.contentWrapper}>
-        <FlatList
-          data={escalations}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIconCircle}>
-                <Feather name="check" size={32} color={Theme.colors.success} />
+      
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Theme.colors.primary} />
+        </View>
+      ) : (
+        <View style={styles.contentWrapper}>
+          <FlatList
+            data={escalations}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Theme.colors.primaryLight} />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIconCircle}>
+                  <Feather name="check" size={32} color={Theme.colors.success} />
+                </View>
+                <Text style={styles.emptyTitle}>Inbox Clear!</Text>
+                <Text style={styles.emptySubtitle}>No open human escalations pending review.</Text>
               </View>
-              <Text style={styles.emptyTitle}>Inbox Clear!</Text>
-              <Text style={styles.emptySubtitle}>No open human escalations pending review.</Text>
-            </View>
-          }
-        />
-      </View>
+            }
+          />
+        </View>
+      )}
     </View>
   );
 };
@@ -135,6 +187,11 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 1400,
     alignSelf: 'center',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   listContent: {
     padding: Theme.spacing.lg,

@@ -1,4 +1,5 @@
 import logging
+from typing import List
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
@@ -202,3 +203,71 @@ def check_health(db: Session = Depends(get_db)):
         "database": db_status,
         "timestamp": datetime.utcnow().isoformat() + "Z"
     }
+
+@router.get("/enquiry", response_model=List[schemas.EnquiryResponse],
+            summary="List all enquiries",
+            description="Retrieve all customer enquiries from the database, ordered chronologically by creation time.")
+def list_enquiries(db: Session = Depends(get_db)):
+    return db.query(models.Enquiry).order_by(models.Enquiry.created_at.desc()).all()
+
+@router.get("/followup", response_model=List[schemas.FollowUpResponse],
+            summary="List all scheduled follow-ups",
+            description="Retrieve all scheduled follow-up actions.")
+def list_followups(db: Session = Depends(get_db)):
+    return db.query(models.FollowUp).order_by(models.FollowUp.scheduled_for.asc()).all()
+
+@router.post("/enquiry/{id}/resolve", response_model=schemas.EnquiryResponse,
+             summary="Mark enquiry/escalation as resolved",
+             description="Sets enquiry status to qualified and logs an escalation resolution event.")
+def resolve_enquiry(id: str, db: Session = Depends(get_db)):
+    enquiry = db.query(models.Enquiry).filter(models.Enquiry.id == id).first()
+    if not enquiry:
+        raise HTTPException(status_code=404, detail="Enquiry not found")
+    
+    enquiry.status = "qualified"
+    
+    db_event = models.Event(
+        enquiry_id=id,
+        event_type="escalation_resolved",
+        payload={"resolved_at": datetime.utcnow().isoformat() + "Z"}
+    )
+    db.add(db_event)
+    db.commit()
+    
+    logger.info(
+        f"Enquiry {id} manually resolved",
+        extra={
+            "event_type": "task_processed",
+            "extra_data": {"enquiry_id": id}
+        }
+    )
+    
+    return enquiry
+
+@router.post("/followup/{id}/complete", response_model=schemas.FollowUpResponse,
+             summary="Mark followup task as completed",
+             description="Sets followup status to executed and logs follow-up completed event.")
+def complete_followup(id: str, db: Session = Depends(get_db)):
+    followup = db.query(models.FollowUp).filter(models.FollowUp.id == id).first()
+    if not followup:
+        raise HTTPException(status_code=404, detail="Follow-up not found")
+    
+    followup.status = "executed"
+    
+    db_event = models.Event(
+        enquiry_id=followup.enquiry_id,
+        event_type="followup_executed",
+        payload={"followup_id": id}
+    )
+    db.add(db_event)
+    db.commit()
+    
+    logger.info(
+        f"Follow-up {id} marked as completed",
+        extra={
+            "event_type": "task_processed",
+            "extra_data": {"followup_id": id, "enquiry_id": followup.enquiry_id}
+        }
+    )
+    
+    return followup

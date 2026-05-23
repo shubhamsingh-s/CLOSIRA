@@ -1,12 +1,11 @@
-import React, { useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated, TouchableWithoutFeedback, Platform } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Animated, TouchableWithoutFeedback, Platform, RefreshControl, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { Theme } from '../theme/theme';
 import { Header } from '../components/Header';
-import mockData from '../mock/mockData.json';
+import { api } from '../utils/api';
 
-// Reusable spring-animated card wrapper
 const AnimatedCard: React.FC<{ children: React.ReactNode; onPress: () => void; style: any }> = ({ children, onPress, style }) => {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -42,26 +41,78 @@ const AnimatedCard: React.FC<{ children: React.ReactNode; onPress: () => void; s
 };
 
 export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
-  const enquiries = mockData.enquiries;
-  const escalations = mockData.escalations;
-  const followups = mockData.followups;
+  const [enquiries, setEnquiries] = useState<any[]>([]);
+  const [followups, setFollowups] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [simulating, setSimulating] = useState(false);
 
-  // Derive stats
+  const fetchStats = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
+    const [enqData, folData] = await Promise.all([
+      api.getEnquiries(),
+      api.getFollowups()
+    ]);
+    setEnquiries(enqData);
+    setFollowups(folData);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchStats();
+    
+    // Refresh stats when screen comes into focus
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchStats(false);
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchStats(false);
+    setRefreshing(false);
+  };
+
+  // Derive stats dynamically
   const totalLeads = enquiries.length;
-  const openEscalations = escalations.length;
+  const openEscalations = enquiries.filter(e => e.status === 'escalated').length;
   const followupsDue = followups.filter(f => f.status === 'pending').length;
   const missedEnquiries = enquiries.filter(e => e.status === 'new').length;
 
   const handleSimulateNewEnquiry = () => {
+    const simulationTemplates = [
+      { name: "John Wick", channel: "whatsapp", message: "Hi! How much does your team package cost? I want a price quote." },
+      { name: "Sarah Connor", channel: "email", message: "I want to schedule and book an appointment for tomorrow slot." },
+      { name: "Neo", channel: "call", message: "Can I cancel my slot and request a refund? Customer ID 404." },
+      { name: "Tony Stark", channel: "whatsapp", message: "Urgently need emergency help with database credentials. Urgent!" },
+      { name: "Bruce Wayne", channel: "call", message: "Do you have parking spots in the downtown branch?" } // Auto-escalated (No SOP matched)
+    ];
+
+    const randomTemplate = simulationTemplates[Math.floor(Math.random() * simulationTemplates.length)];
+
     Alert.alert(
-      "Simulate Enquiry",
-      "Would you like to simulate a new Whatsapp enquiry matching the Booking SOP?",
+      "Simulate Inbound Lead",
+      `Simulate inbound ${randomTemplate.channel} enquiry from ${randomTemplate.name}?`,
       [
         { text: "Cancel", style: "cancel" },
         { 
           text: "Confirm", 
-          onPress: () => {
-            Alert.alert("Success", "New Whatsapp Enquiry 'enq_008' created and SOP matched!");
+          onPress: async () => {
+            setSimulating(true);
+            const result = await api.createEnquiry(randomTemplate.name, randomTemplate.channel, randomTemplate.message);
+            setSimulating(false);
+            
+            if (result && result.enquiry_id) {
+              Alert.alert(
+                "Lead Generated", 
+                `New lead queued. Message: "${randomTemplate.message.substring(0, 40)}..."`,
+                [{ text: "View Leads", onPress: () => {
+                  fetchStats(false);
+                  navigation.navigate('Leads');
+                }}]
+              );
+            }
           } 
         }
       ]
@@ -69,132 +120,154 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
   };
 
   const recentActivities = [
-    { id: '1', title: 'New Whatsapp Lead', detail: 'John Doe requested premium tier pricing.', time: '5m ago', type: 'sop_match' },
-    { id: '2', title: 'Escalation Triggered', detail: 'Sarah M. escalated due to billing difference.', time: '20m ago', type: 'escalation' },
-    { id: '3', title: 'Follow-up Scheduled', detail: 'Follow-up created for Alice Cooper.', time: '1h ago', type: 'followup' },
-    { id: '4', title: 'Call Enquiry Auto-Escalated', detail: 'Liam Neeson message had no matching SOP.', time: '2h ago', type: 'escalation' },
+    { id: '1', title: 'Lead Ingested', detail: 'New query scheduled for automatic keyword SOP analysis.', time: 'Just now', type: 'sop_match' },
+    { id: '2', title: 'SOP Triage Completed', detail: 'Matching keywords mapped to suggested template response.', time: '10m ago', type: 'sop_match' },
+    { id: '3', title: 'Escalation Alert', detail: 'No keywords matched. Triage auto-escalated to manager review.', time: '30m ago', type: 'escalation' },
+    { id: '4', title: 'Follow-up Sent', detail: 'Scheduled follow-up reminder dispatched.', time: '1h ago', type: 'followup' },
   ];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Theme.colors.primaryLight} />
+      }
+    >
       <Header title="Closira Workspace" subtitle="AI communication assistant for SMBs" />
 
-      {/* Main Responsive Grid Container */}
-      <View style={styles.dashboardContainer}>
-        
-        {/* Grid of Stats Cards */}
-        <View style={styles.statsGrid}>
-          
-          <AnimatedCard 
-            style={[styles.statCard, styles.cardBlue]}
-            onPress={() => navigation.navigate('Leads')}
-          >
-            <LinearGradient
-              colors={['rgba(59, 130, 246, 0.15)', 'rgba(30, 41, 59, 0)']}
-              style={StyleSheet.absoluteFillObject}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-            />
-            <View style={styles.cardHeader}>
-              <Feather name="users" size={18} color={Theme.colors.info} />
-              <Text style={styles.statLabel}>Total Leads</Text>
-            </View>
-            <Text style={styles.statNumber}>{totalLeads}</Text>
-          </AnimatedCard>
-
-          <AnimatedCard 
-            style={[styles.statCard, styles.cardRed]}
-            onPress={() => navigation.navigate('Escalations')}
-          >
-            <LinearGradient
-              colors={['rgba(239, 68, 68, 0.15)', 'rgba(30, 41, 59, 0)']}
-              style={StyleSheet.absoluteFillObject}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-            />
-            <View style={styles.cardHeader}>
-              <Feather name="alert-triangle" size={18} color={Theme.colors.danger} />
-              <Text style={styles.statLabel}>Open Escalations</Text>
-            </View>
-            <Text style={styles.statNumber}>{openEscalations}</Text>
-            {openEscalations > 0 && <View style={styles.redDotBadge} />}
-          </AnimatedCard>
-
-          <AnimatedCard 
-            style={[styles.statCard, styles.cardAmber]}
-            onPress={() => navigation.navigate('Follow-ups')}
-          >
-            <LinearGradient
-              colors={['rgba(245, 158, 11, 0.15)', 'rgba(30, 41, 59, 0)']}
-              style={StyleSheet.absoluteFillObject}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-            />
-            <View style={styles.cardHeader}>
-              <Feather name="clock" size={18} color={Theme.colors.warning} />
-              <Text style={styles.statLabel}>Follow-ups Due</Text>
-            </View>
-            <Text style={styles.statNumber}>{followupsDue}</Text>
-          </AnimatedCard>
-
-          <AnimatedCard 
-            style={[styles.statCard, styles.cardGreen]}
-            onPress={() => navigation.navigate('Leads')}
-          >
-            <LinearGradient
-              colors={['rgba(16, 185, 129, 0.15)', 'rgba(30, 41, 59, 0)']}
-              style={StyleSheet.absoluteFillObject}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-            />
-            <View style={styles.cardHeader}>
-              <Feather name="message-square" size={18} color={Theme.colors.success} />
-              <Text style={styles.statLabel}>Unprocessed</Text>
-            </View>
-            <Text style={styles.statNumber}>{missedEnquiries}</Text>
-          </AnimatedCard>
-          
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Theme.colors.primary} style={{ marginTop: 40 }} />
         </View>
-
-        {/* Quick Action Buttons */}
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleSimulateNewEnquiry} activeOpacity={0.8}>
-            <Feather name="plus-circle" size={16} color="#FFFFFF" style={styles.actionIcon} />
-            <Text style={styles.actionButtonText}>Simulate Inbound</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.actionSecondary]} 
-            onPress={() => Alert.alert("Export Logs", "Exporting system events to CSV...")}
-            activeOpacity={0.8}
-          >
-            <Feather name="download" size={16} color={Theme.colors.textPrimary} style={styles.actionIcon} />
-            <Text style={[styles.actionButtonText, styles.actionSecondaryText]}>Export Event Logs</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Recent Activity Log */}
-        <Text style={styles.sectionTitle}>Recent Activities</Text>
-        <View style={styles.activityFeed}>
-          {recentActivities.map((activity) => (
-            <View key={activity.id} style={[
-              styles.activityItemCard,
-              activity.type === 'escalation' ? styles.borderRed : 
-              activity.type === 'followup' ? styles.borderAmber : styles.borderGreen
-            ]}>
-              <View style={styles.activityContent}>
-                <View style={styles.activityHeader}>
-                  <Text style={styles.activityTitle}>{activity.title}</Text>
-                  <Text style={styles.activityTime}>{activity.time}</Text>
-                </View>
-                <Text style={styles.activityDetail}>{activity.detail}</Text>
+      ) : (
+        <View style={styles.dashboardContainer}>
+          
+          {/* Grid of Stats Cards */}
+          <View style={styles.statsGrid}>
+            
+            <AnimatedCard 
+              style={[styles.statCard, styles.cardBlue]}
+              onPress={() => navigation.navigate('Leads')}
+            >
+              <LinearGradient
+                colors={['rgba(59, 130, 246, 0.15)', 'rgba(30, 41, 59, 0)']}
+                style={StyleSheet.absoluteFillObject}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+              />
+              <View style={styles.cardHeader}>
+                <Feather name="users" size={18} color={Theme.colors.info} />
+                <Text style={styles.statLabel}>Total Leads</Text>
               </View>
-            </View>
-          ))}
-        </View>
+              <Text style={styles.statNumber}>{totalLeads}</Text>
+            </AnimatedCard>
 
-      </View>
+            <AnimatedCard 
+              style={[styles.statCard, styles.cardRed]}
+              onPress={() => navigation.navigate('Escalations')}
+            >
+              <LinearGradient
+                colors={['rgba(239, 68, 68, 0.15)', 'rgba(30, 41, 59, 0)']}
+                style={StyleSheet.absoluteFillObject}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+              />
+              <View style={styles.cardHeader}>
+                <Feather name="alert-triangle" size={18} color={Theme.colors.danger} />
+                <Text style={styles.statLabel}>Open Escalations</Text>
+              </View>
+              <Text style={styles.statNumber}>{openEscalations}</Text>
+              {openEscalations > 0 && <View style={styles.redDotBadge} />}
+            </AnimatedCard>
+
+            <AnimatedCard 
+              style={[styles.statCard, styles.cardAmber]}
+              onPress={() => navigation.navigate('Follow-ups')}
+            >
+              <LinearGradient
+                colors={['rgba(245, 158, 11, 0.15)', 'rgba(30, 41, 59, 0)']}
+                style={StyleSheet.absoluteFillObject}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+              />
+              <View style={styles.cardHeader}>
+                <Feather name="clock" size={18} color={Theme.colors.warning} />
+                <Text style={styles.statLabel}>Follow-ups Due</Text>
+              </View>
+              <Text style={styles.statNumber}>{followupsDue}</Text>
+            </AnimatedCard>
+
+            <AnimatedCard 
+              style={[styles.statCard, styles.cardGreen]}
+              onPress={() => navigation.navigate('Leads')}
+            >
+              <LinearGradient
+                colors={['rgba(16, 185, 129, 0.15)', 'rgba(30, 41, 59, 0)']}
+                style={StyleSheet.absoluteFillObject}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+              />
+              <View style={styles.cardHeader}>
+                <Feather name="message-square" size={18} color={Theme.colors.success} />
+                <Text style={styles.statLabel}>Unprocessed</Text>
+              </View>
+              <Text style={styles.statNumber}>{missedEnquiries}</Text>
+            </AnimatedCard>
+            
+          </View>
+
+          {/* Quick Action Buttons */}
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity 
+              style={styles.actionButton} 
+              onPress={handleSimulateNewEnquiry} 
+              activeOpacity={0.8}
+              disabled={simulating}
+            >
+              {simulating ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Feather name="plus-circle" size={16} color="#FFFFFF" style={styles.actionIcon} />
+                  <Text style={styles.actionButtonText}>Simulate Inbound</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.actionSecondary]} 
+              onPress={() => Alert.alert("Export Logs", "Exporting system events to CSV...")}
+              activeOpacity={0.8}
+            >
+              <Feather name="download" size={16} color={Theme.colors.textPrimary} style={styles.actionIcon} />
+              <Text style={[styles.actionButtonText, styles.actionSecondaryText]}>Export Event Logs</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Recent Activity Log */}
+          <Text style={styles.sectionTitle}>Recent Activities</Text>
+          <View style={styles.activityFeed}>
+            {recentActivities.map((activity) => (
+              <View key={activity.id} style={[
+                styles.activityItemCard,
+                activity.type === 'escalation' ? styles.borderRed : 
+                activity.type === 'followup' ? styles.borderAmber : styles.borderGreen
+              ]}>
+                <View style={styles.activityContent}>
+                  <View style={styles.activityHeader}>
+                    <Text style={styles.activityTitle}>{activity.title}</Text>
+                    <Text style={styles.activityTime}>{activity.time}</Text>
+                  </View>
+                  <Text style={styles.activityDetail}>{activity.detail}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+        </View>
+      )}
     </ScrollView>
   );
 };
@@ -206,6 +279,10 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingBottom: Theme.spacing.xxl,
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dashboardContainer: {
     width: '100%',

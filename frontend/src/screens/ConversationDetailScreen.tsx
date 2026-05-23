@@ -1,19 +1,91 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, TextInput } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Theme } from '../theme/theme';
 import { ChannelBadge } from '../components/ChannelBadge';
 import { StatusBadge } from '../components/StatusBadge';
-import mockData from '../mock/mockData.json';
+import { api } from '../utils/api';
 
 export const ConversationDetailScreen: React.FC<{ route: any, navigation: any }> = ({ route, navigation }) => {
   const { id } = route.params;
 
-  // Retrieve mock database history
-  const histories = mockData.histories as Record<string, typeof mockData.histories['enq_001']>;
-  const data = histories[id];
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  if (!data) {
+  // Follow-up Form State
+  const [delay, setDelay] = useState(30);
+  const [template, setTemplate] = useState('');
+  const [scheduling, setScheduling] = useState(false);
+  const [resolving, setResolving] = useState(false);
+
+  const fetchHistory = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
+    const result = await api.getHistory(id);
+    setData(result);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchHistory();
+  }, [id]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchHistory(false);
+    setRefreshing(false);
+  };
+
+  const handleResolve = async () => {
+    setResolving(true);
+    const result = await api.resolveEscalation(id);
+    setResolving(false);
+
+    if (result && result.status) {
+      Alert.alert("Success", "Escalation resolved and status updated.");
+      fetchHistory(false);
+    } else {
+      Alert.alert("Error", "Could not resolve escalation. Please try again.");
+    }
+  };
+
+  const handleScheduleFollowup = async () => {
+    if (delay <= 0) {
+      Alert.alert("Validation Error", "Please specify a positive delay.");
+      return;
+    }
+
+    setScheduling(true);
+    const result = await api.scheduleFollowup(id, delay, template.trim() || undefined);
+    setScheduling(false);
+
+    if (result && result.id) {
+      Alert.alert("Follow-up Scheduled", `A reminder has been registered for this customer in ${delay} minutes.`);
+      setTemplate('');
+      fetchHistory(false);
+    } else {
+      Alert.alert("Error", "Failed to schedule follow-up. Check API connectivity.");
+    }
+  };
+
+  const handleCopySuggested = (response: string) => {
+    Alert.alert("Response Copied", "Suggested SOP response has been copied to your clipboard.");
+  };
+
+  const formatDate = (isoStr: string) => {
+    const d = new Date(isoStr);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.errorContainer}>
+        <ActivityIndicator size="large" color={Theme.colors.primary} />
+      </View>
+    );
+  }
+
+  if (!data || !data.enquiry) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Conversation not found.</Text>
@@ -26,28 +98,24 @@ export const ConversationDetailScreen: React.FC<{ route: any, navigation: any }>
 
   const { enquiry, sop_matches, followups, events } = data;
 
-  const formatDate = (isoStr: string) => {
-    const d = new Date(isoStr);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  };
-
-  const handleCopySuggested = (response: string) => {
-    Alert.alert("Response Copied", "Suggested SOP response has been copied to your clipboard.");
-  };
-
-  // Build synthetic AI summary based on status and channel
   const getAISummary = () => {
     if (enquiry.status === 'escalated') {
       return `Customer is expressing dissatisfaction or reporting a blocker that requires manual agent intervention. Status has been escalated.`;
     }
-    if (sop_matches.length > 0) {
+    if (sop_matches && sop_matches.length > 0) {
       return `Customer message matches '${sop_matches[0].sop_label}' keywords. A suggested response has been formulated automatically.`;
     }
-    return `New incoming message from ${enquiry.customer_name} via ${enquiry.channel}. Initial keyword matching is underway.`;
+    return `New incoming message from ${enquiry.customer_name} via ${enquiry.channel}. Initial keyword matching has completed.`;
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Theme.colors.primaryLight} />
+      }
+    >
       <View style={styles.detailContainer}>
         
         {/* Header Info */}
@@ -61,6 +129,30 @@ export const ConversationDetailScreen: React.FC<{ route: any, navigation: any }>
             <Text style={styles.timeLabel}>Received: {formatDate(enquiry.created_at)}</Text>
           </View>
         </View>
+
+        {/* Action Controls for Escalations */}
+        {enquiry.status === 'escalated' && (
+          <View style={styles.actionBanner}>
+            <View style={{ flex: 1, marginRight: Theme.spacing.md }}>
+              <Text style={styles.bannerTitle}>Flagged Escalation</Text>
+              <Text style={styles.bannerText}>This lead requires agent review. You can resolve the ticket below.</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.bannerResolveBtn} 
+              onPress={handleResolve}
+              disabled={resolving}
+            >
+              {resolving ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Feather name="check" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
+                  <Text style={styles.bannerResolveText}>Resolve</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Message Thread Box */}
         <Text style={styles.sectionTitle}>Inbound Message</Text>
@@ -82,7 +174,7 @@ export const ConversationDetailScreen: React.FC<{ route: any, navigation: any }>
 
         {/* SOP Matching Outcomes */}
         <Text style={styles.sectionTitle}>SOP Match Result</Text>
-        {sop_matches.length > 0 ? (
+        {sop_matches && sop_matches.length > 0 ? (
           <View style={styles.sopCard}>
             <View style={styles.sopHeader}>
               <View style={styles.sopBadgeRow}>
@@ -115,10 +207,51 @@ export const ConversationDetailScreen: React.FC<{ route: any, navigation: any }>
           </View>
         )}
 
+        {/* Scheduler Option Form */}
+        <Text style={styles.sectionTitle}>Quick Schedule Follow-up</Text>
+        <View style={styles.formCard}>
+          <Text style={styles.formLabel}>Delay Interval (minutes)</Text>
+          <View style={styles.pickerRow}>
+            {([15, 30, 60, 120] as const).map(mins => (
+              <TouchableOpacity
+                key={mins}
+                style={[styles.pickerBtn, delay === mins && styles.pickerBtnActive]}
+                onPress={() => setDelay(mins)}
+              >
+                <Text style={[styles.pickerText, delay === mins && styles.pickerTextActive]}>{mins}m</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.formLabel}>Message Template (Optional)</Text>
+          <TextInput
+            style={styles.formInput}
+            placeholder="e.g. Hi there! Just following up to see if you had any other questions..."
+            placeholderTextColor="#64748B"
+            value={template}
+            onChangeText={setTemplate}
+          />
+
+          <TouchableOpacity
+            style={styles.formSubmitBtn}
+            onPress={handleScheduleFollowup}
+            disabled={scheduling}
+          >
+            {scheduling ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <Feather name="clock" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.formSubmitBtnText}>Register Follow-up Alert</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+
         {/* Chronological Status Timeline */}
         <Text style={styles.sectionTitle}>Event Audit Timeline</Text>
         <View style={styles.timelineCard}>
-          {events.map((evt, idx) => {
+          {events && events.map((evt: any, idx: number) => {
             let eventTitle = evt.event_type.replace('_', ' ');
             let details = '';
             let iconName = 'circle';
@@ -144,6 +277,14 @@ export const ConversationDetailScreen: React.FC<{ route: any, navigation: any }>
               details = `Background processing worker completed.`;
               iconName = 'cpu';
               iconColor = Theme.colors.primaryLight;
+            } else if (evt.event_type === 'escalation_resolved') {
+              details = `Ticket resolved manually by business manager.`;
+              iconName = 'check';
+              iconColor = Theme.colors.success;
+            } else if (evt.event_type === 'followup_executed') {
+              details = `Follow-up template message successfully sent.`;
+              iconName = 'mail';
+              iconColor = Theme.colors.success;
             }
 
             return (
@@ -229,6 +370,40 @@ const styles = StyleSheet.create({
   },
   timeLabel: {
     ...Theme.typography.caption,
+  },
+  actionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderRadius: 10,
+    padding: Theme.spacing.md,
+    marginBottom: Theme.spacing.md,
+  },
+  bannerTitle: {
+    color: Theme.colors.danger,
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  bannerText: {
+    color: Theme.colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  bannerResolveBtn: {
+    backgroundColor: Theme.colors.danger,
+    paddingHorizontal: Theme.spacing.md,
+    paddingVertical: Theme.spacing.sm - 2,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  bannerResolveText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   sectionTitle: {
     ...Theme.typography.titleMedium,
@@ -361,6 +536,74 @@ const styles = StyleSheet.create({
     ...Theme.typography.bodyMedium,
     marginTop: 4,
     color: Theme.colors.textSecondary,
+  },
+  formCard: {
+    backgroundColor: Theme.colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(51, 65, 85, 0.4)',
+    padding: Theme.spacing.md,
+    marginBottom: Theme.spacing.md,
+  },
+  formLabel: {
+    ...Theme.typography.caption,
+    fontWeight: '700',
+    color: Theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: Theme.spacing.xs,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Theme.spacing.md,
+  },
+  pickerBtn: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+    borderRadius: 6,
+    paddingVertical: Theme.spacing.sm - 2,
+    alignItems: 'center',
+    marginHorizontal: 3,
+  },
+  pickerBtnActive: {
+    borderColor: Theme.colors.primaryLight,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+  },
+  pickerText: {
+    ...Theme.typography.caption,
+    color: Theme.colors.textSecondary,
+    fontWeight: '600',
+  },
+  pickerTextActive: {
+    color: Theme.colors.primaryLight,
+    fontWeight: '700',
+  },
+  formInput: {
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+    borderRadius: 8,
+    padding: Theme.spacing.md,
+    color: '#FFFFFF',
+    fontSize: 14,
+    marginBottom: Theme.spacing.md,
+  },
+  formSubmitBtn: {
+    backgroundColor: Theme.colors.primary,
+    borderRadius: 8,
+    paddingVertical: Theme.spacing.md - 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    ...Theme.shadows.sm,
+  },
+  formSubmitBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
   },
   timelineCard: {
     backgroundColor: Theme.colors.card,
