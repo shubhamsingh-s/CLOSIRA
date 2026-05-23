@@ -1,0 +1,449 @@
+{
+  "enquiries": [
+    {
+      "id": "enq_001",
+      "customer_name": "Sarah M.",
+      "channel": "whatsapp",
+      "status": "escalated",
+      "message": "I was charged $50 instead of the $29 promotional plan! This is unacceptable, please fix it immediately.",
+      "created_at": "2026-05-23T11:30:00Z",
+      "updated_at": "2026-05-23T11:45:00Z"
+    },
+    {
+      "id": "enq_002",
+      "customer_name": "Alice Cooper",
+      "channel": "email",
+      "status": "qualified",
+      "message": "Hi there! I would like to reserve a slot and schedule a booking for next Tuesday afternoon. Do you have openings?",
+      "created_at": "2026-05-23T12:05:00Z",
+      "updated_at": "2026-05-23T12:06:00Z"
+    },
+    {
+      "id": "enq_003",
+      "customer_name": "Bob Ross",
+      "channel": "call",
+      "status": "qualified",
+      "message": "Calling to check if I can get a refund for my cancelled booking from yesterday. Invoice #10243.",
+      "created_at": "2026-05-23T12:15:00Z",
+      "updated_at": "2026-05-23T12:16:00Z"
+    },
+    {
+      "id": "enq_004",
+      "customer_name": "John Doe",
+      "channel": "whatsapp",
+      "status": "qualified",
+      "message": "Hi, what is the cost of your premium tier for SMBs? Do you provide a customized pricing quote?",
+      "created_at": "2026-05-23T12:30:00Z",
+      "updated_at": "2026-05-23T12:31:00Z"
+    },
+    {
+      "id": "enq_005",
+      "customer_name": "Liam Neeson",
+      "channel": "call",
+      "status": "escalated",
+      "message": "Can you tell me if your offices are wheelchair accessible? I plan to visit tomorrow morning.",
+      "created_at": "2026-05-23T12:45:00Z",
+      "updated_at": "2026-05-23T12:46:00Z"
+    },
+    {
+      "id": "enq_006",
+      "customer_name": "Emma Watson",
+      "channel": "email",
+      "status": "escalated",
+      "message": "URGENT: I cannot log into my manager dashboard. It shows a 500 error screen. Please help!",
+      "created_at": "2026-05-23T12:50:00Z",
+      "updated_at": "2026-05-23T12:55:00Z"
+    },
+    {
+      "id": "enq_007",
+      "customer_name": "Charlie Puth",
+      "channel": "whatsapp",
+      "status": "new",
+      "message": "Is anyone available to answer a question regarding support?",
+      "created_at": "2026-05-23T13:00:00Z",
+      "updated_at": "2026-05-23T13:00:00Z"
+    }
+  ],
+  "escalations": [
+    {
+      "id": "esc_001",
+      "enquiry_id": "enq_001",
+      "customer_name": "Sarah M.",
+      "channel": "whatsapp",
+      "reason": "Billing discrepancy: Charged $50 instead of $29 promotion.",
+      "urgency": "high",
+      "created_at": "2026-05-23T11:45:00Z"
+    },
+    {
+      "id": "esc_002",
+      "enquiry_id": "enq_005",
+      "customer_name": "Liam Neeson",
+      "channel": "call",
+      "reason": "Auto-escalated: No matching SOP found for physical accessibility query.",
+      "urgency": "medium",
+      "created_at": "2026-05-23T12:46:00Z"
+    },
+    {
+      "id": "esc_003",
+      "enquiry_id": "enq_006",
+      "customer_name": "Emma Watson",
+      "channel": "email",
+      "reason": "Urgent technical blocker: Manager cannot login (500 internal server error).",
+      "urgency": "high",
+      "created_at": "2026-05-23T12:55:00Z"
+    }
+  ],
+  "followups": [
+    {
+      "id": "fol_001",
+      "enquiry_id": "enq_002",
+      "customer_name": "Alice Cooper",
+      "delay_in_minutes": 30,
+      "message_preview": "Hi Alice, following up to confirm if Tuesday at 3 PM works for your booking?",
+      "status": "pending",
+      "due_time": "2026-05-23T12:36:00Z"
+    },
+    {
+      "id": "fol_002",
+      "enquiry_id": "enq_004",
+      "customer_name": "John Doe",
+      "delay_in_minutes": 60,
+      "message_preview": "Hi John, following up to see if you had any questions about the premium plan quote?",
+      "status": "pending",
+      "due_time": "2026-05-23T13:31:00Z"
+    }
+  ],
+  "histories": {
+    "enq_001": {
+      "enquiry": {
+        "id": "enq_001",
+        "customer_name": "Sarah M.",
+        "channel": "whatsapp",
+        "message": "I was charged $50 instead of the $29 promotional plan! This is unacceptable, please fix it immediately.",
+        "status": "escalated",
+        "created_at": "2026-05-23T11:30:00Z",
+        "updated_at": "2026-05-23T11:45:00Z"
+      },
+      "sop_matches": [
+        {
+          "id": "sop_m_001",
+          "enquiry_id": "enq_001",
+          "sop_label": "Complaint Handling",
+          "suggested_response": "We apologize for the inconvenience. We have logged your complaint and our customer support lead will reach out to you within the hour.",
+          "matched_keywords": ["unacceptable", "fix"],
+          "created_at": "2026-05-23T11:31:00Z"
+        }
+      ],
+      "followups": [],
+      "events": [
+        {
+          "id": "evt_001_1",
+          "enquiry_id": "enq_001",
+          "event_type": "enquiry_created",
+          "payload": {"channel": "whatsapp", "customer_name": "Sarah M."},
+          "created_at": "2026-05-23T11:30:00Z"
+        },
+        {
+          "id": "evt_001_2",
+          "enquiry_id": "enq_001",
+          "event_type": "sop_matched",
+          "payload": {"sop_label": "Complaint Handling", "matched_keywords": ["unacceptable", "fix"]},
+          "created_at": "2026-05-23T11:31:00Z"
+        },
+        {
+          "id": "evt_001_3",
+          "enquiry_id": "enq_001",
+          "event_type": "task_processed",
+          "payload": {"processed_at": "2026-05-23T11:31:05Z"},
+          "created_at": "2026-05-23T11:31:05Z"
+        },
+        {
+          "id": "evt_001_4",
+          "enquiry_id": "enq_001",
+          "event_type": "escalation_triggered",
+          "payload": {"reason": "Billing discrepancy: Charged $50 instead of $29 promotion."},
+          "created_at": "2026-05-23T11:45:00Z"
+        }
+      ]
+    },
+    "enq_002": {
+      "enquiry": {
+        "id": "enq_002",
+        "customer_name": "Alice Cooper",
+        "channel": "email",
+        "message": "Hi there! I would like to reserve a slot and schedule a booking for next Tuesday afternoon. Do you have openings?",
+        "status": "qualified",
+        "created_at": "2026-05-23T12:05:00Z",
+        "updated_at": "2026-05-23T12:06:00Z"
+      },
+      "sop_matches": [
+        {
+          "id": "sop_m_002",
+          "enquiry_id": "enq_002",
+          "sop_label": "Booking Enquiry",
+          "suggested_response": "Hi! I can help you book an appointment. Please let us know your preferred date and time, or visit our booking link.",
+          "matched_keywords": ["reserve", "booking", "schedule"],
+          "created_at": "2026-05-23T12:06:00Z"
+        }
+      ],
+      "followups": [
+        {
+          "id": "fol_001",
+          "enquiry_id": "enq_002",
+          "delay_in_minutes": 30,
+          "message_template": "Hi Alice, following up to confirm if Tuesday at 3 PM works for your booking?",
+          "status": "pending",
+          "scheduled_for": "2026-05-23T12:36:00Z",
+          "created_at": "2026-05-23T12:06:30Z"
+        }
+      ],
+      "events": [
+        {
+          "id": "evt_002_1",
+          "enquiry_id": "enq_002",
+          "event_type": "enquiry_created",
+          "payload": {"channel": "email", "customer_name": "Alice Cooper"},
+          "created_at": "2026-05-23T12:05:00Z"
+        },
+        {
+          "id": "evt_002_2",
+          "enquiry_id": "enq_002",
+          "event_type": "sop_matched",
+          "payload": {"sop_label": "Booking Enquiry", "matched_keywords": ["reserve", "booking", "schedule"]},
+          "created_at": "2026-05-23T12:06:00Z"
+        },
+        {
+          "id": "evt_002_3",
+          "enquiry_id": "enq_002",
+          "event_type": "task_processed",
+          "payload": {"processed_at": "2026-05-23T12:06:02Z"},
+          "created_at": "2026-05-23T12:06:02Z"
+        },
+        {
+          "id": "evt_002_4",
+          "enquiry_id": "enq_002",
+          "event_type": "followup_created",
+          "payload": {"followup_id": "fol_001", "delay_in_minutes": 30},
+          "created_at": "2026-05-23T12:06:30Z"
+        }
+      ]
+    },
+    "enq_003": {
+      "enquiry": {
+        "id": "enq_003",
+        "customer_name": "Bob Ross",
+        "channel": "call",
+        "message": "Calling to check if I can get a refund for my cancelled booking from yesterday. Invoice #10243.",
+        "status": "qualified",
+        "created_at": "2026-05-23T12:15:00Z",
+        "updated_at": "2026-05-23T12:16:00Z"
+      },
+      "sop_matches": [
+        {
+          "id": "sop_m_003",
+          "enquiry_id": "enq_003",
+          "sop_label": "Refund Request",
+          "suggested_response": "Thank you for reaching out. We process refund requests under our 14-day policy. Please provide your order or invoice ID.",
+          "matched_keywords": ["refund", "cancelled"],
+          "created_at": "2026-05-23T12:16:00Z"
+        }
+      ],
+      "followups": [],
+      "events": [
+        {
+          "id": "evt_003_1",
+          "enquiry_id": "enq_003",
+          "event_type": "enquiry_created",
+          "payload": {"channel": "call", "customer_name": "Bob Ross"},
+          "created_at": "2026-05-23T12:15:00Z"
+        },
+        {
+          "id": "evt_003_2",
+          "enquiry_id": "enq_003",
+          "event_type": "sop_matched",
+          "payload": {"sop_label": "Refund Request", "matched_keywords": ["refund", "cancelled"]},
+          "created_at": "2026-05-23T12:16:00Z"
+        },
+        {
+          "id": "evt_003_3",
+          "enquiry_id": "enq_003",
+          "event_type": "task_processed",
+          "payload": {"processed_at": "2026-05-23T12:16:05Z"},
+          "created_at": "2026-05-23T12:16:05Z"
+        }
+      ]
+    },
+    "enq_004": {
+      "enquiry": {
+        "id": "enq_004",
+        "customer_name": "John Doe",
+        "channel": "whatsapp",
+        "message": "Hi, what is the cost of your premium tier for SMBs? Do you provide a customized pricing quote?",
+        "status": "qualified",
+        "created_at": "2026-05-23T12:30:00Z",
+        "updated_at": "2026-05-23T12:31:00Z"
+      },
+      "sop_matches": [
+        {
+          "id": "sop_m_004",
+          "enquiry_id": "enq_004",
+          "sop_label": "Pricing Question",
+          "suggested_response": "Hello! Our base plans start at $29/month. We also offer customized packages. Let us know if you want a detailed estimate.",
+          "matched_keywords": ["cost", "pricing", "quote"],
+          "created_at": "2026-05-23T12:31:00Z"
+        }
+      ],
+      "followups": [
+        {
+          "id": "fol_002",
+          "enquiry_id": "enq_004",
+          "delay_in_minutes": 60,
+          "message_template": "Hi John, following up to see if you had any questions about the premium plan quote?",
+          "status": "pending",
+          "scheduled_for": "2026-05-23T13:31:00Z",
+          "created_at": "2026-05-23T12:31:30Z"
+        }
+      ],
+      "events": [
+        {
+          "id": "evt_004_1",
+          "enquiry_id": "enq_004",
+          "event_type": "enquiry_created",
+          "payload": {"channel": "whatsapp", "customer_name": "John Doe"},
+          "created_at": "2026-05-23T12:30:00Z"
+        },
+        {
+          "id": "evt_004_2",
+          "enquiry_id": "enq_004",
+          "event_type": "sop_matched",
+          "payload": {"sop_label": "Pricing Question", "matched_keywords": ["cost", "pricing", "quote"]},
+          "created_at": "2026-05-23T12:31:00Z"
+        },
+        {
+          "id": "evt_004_3",
+          "enquiry_id": "enq_004",
+          "event_type": "task_processed",
+          "payload": {"processed_at": "2026-05-23T12:31:02Z"},
+          "created_at": "2026-05-23T12:31:02Z"
+        },
+        {
+          "id": "evt_004_4",
+          "enquiry_id": "enq_004",
+          "event_type": "followup_created",
+          "payload": {"followup_id": "fol_002", "delay_in_minutes": 60},
+          "created_at": "2026-05-23T12:31:30Z"
+        }
+      ]
+    },
+    "enq_005": {
+      "enquiry": {
+        "id": "enq_005",
+        "customer_name": "Liam Neeson",
+        "channel": "call",
+        "message": "Can you tell me if your offices are wheelchair accessible? I plan to visit tomorrow morning.",
+        "status": "escalated",
+        "created_at": "2026-05-23T12:45:00Z",
+        "updated_at": "2026-05-23T12:46:00Z"
+      },
+      "sop_matches": [],
+      "followups": [],
+      "events": [
+        {
+          "id": "evt_005_1",
+          "enquiry_id": "enq_005",
+          "event_type": "enquiry_created",
+          "payload": {"channel": "call", "customer_name": "Liam Neeson"},
+          "created_at": "2026-05-23T12:45:00Z"
+        },
+        {
+          "id": "evt_005_2",
+          "enquiry_id": "enq_005",
+          "event_type": "escalation_triggered",
+          "payload": {"reason": "Auto-escalated: No matching SOP found for physical accessibility query."},
+          "created_at": "2026-05-23T12:46:00Z"
+        },
+        {
+          "id": "evt_005_3",
+          "enquiry_id": "enq_005",
+          "event_type": "task_processed",
+          "payload": {"processed_at": "2026-05-23T12:46:02Z"},
+          "created_at": "2026-05-23T12:46:02Z"
+        }
+      ]
+    },
+    "enq_006": {
+      "enquiry": {
+        "id": "enq_006",
+        "customer_name": "Emma Watson",
+        "channel": "email",
+        "message": "URGENT: I cannot log into my manager dashboard. It shows a 500 error screen. Please help!",
+        "status": "escalated",
+        "created_at": "2026-05-23T12:50:00Z",
+        "updated_at": "2026-05-23T12:55:00Z"
+      },
+      "sop_matches": [
+        {
+          "id": "sop_m_006",
+          "enquiry_id": "enq_006",
+          "sop_label": "After-hours Support",
+          "suggested_response": "Our office is currently closed. For emergency support, please call +1 (555) 0199. Standard issues will be resolved on the next business day.",
+          "matched_keywords": ["urgent", "help"],
+          "created_at": "2026-05-23T12:51:00Z"
+        }
+      ],
+      "followups": [],
+      "events": [
+        {
+          "id": "evt_006_1",
+          "enquiry_id": "enq_006",
+          "event_type": "enquiry_created",
+          "payload": {"channel": "email", "customer_name": "Emma Watson"},
+          "created_at": "2026-05-23T12:50:00Z"
+        },
+        {
+          "id": "evt_006_2",
+          "enquiry_id": "enq_006",
+          "event_type": "sop_matched",
+          "payload": {"sop_label": "After-hours Support", "matched_keywords": ["urgent", "help"]},
+          "created_at": "2026-05-23T12:51:00Z"
+        },
+        {
+          "id": "evt_006_3",
+          "enquiry_id": "enq_006",
+          "event_type": "task_processed",
+          "payload": {"processed_at": "2026-05-23T12:51:05Z"},
+          "created_at": "2026-05-23T12:51:05Z"
+        },
+        {
+          "id": "evt_006_4",
+          "enquiry_id": "enq_006",
+          "event_type": "escalation_triggered",
+          "payload": {"reason": "Urgent technical blocker: Manager cannot login (500 internal server error)."},
+          "created_at": "2026-05-23T12:55:00Z"
+        }
+      ]
+    },
+    "enq_007": {
+      "enquiry": {
+        "id": "enq_007",
+        "customer_name": "Charlie Puth",
+        "channel": "whatsapp",
+        "message": "Is anyone available to answer a question regarding support?",
+        "status": "new",
+        "created_at": "2026-05-23T13:00:00Z",
+        "updated_at": "2026-05-23T13:00:00Z"
+      },
+      "sop_matches": [],
+      "followups": [],
+      "events": [
+        {
+          "id": "evt_007_1",
+          "enquiry_id": "enq_007",
+          "event_type": "enquiry_created",
+          "payload": {"channel": "whatsapp", "customer_name": "Charlie Puth"},
+          "created_at": "2026-05-23T13:00:00Z"
+        }
+      ]
+    }
+  }
+}

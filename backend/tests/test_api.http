@@ -1,0 +1,109 @@
+### Closira API Test Suite
+# Use with REST Client extension in VS Code or similar HTTP tooling.
+
+@baseUrl = http://127.0.0.1:8000
+
+### 1. Health Check
+GET {{baseUrl}}/health
+Accept: application/json
+
+###
+
+### 2. Create Whatsapp Enquiry (Pricing SOP Match)
+# Expected result: Status queued, immediately returns, background task runs keyword matcher (matches 'pricing', 'cost').
+# SOP matched -> qualified.
+POST {{baseUrl}}/enquiry
+Content-Type: application/json
+Accept: application/json
+
+{
+  "channel": "whatsapp",
+  "customer_name": "John Doe",
+  "message": "Hi, what is the cost of your premium plan? I need pricing detail."
+}
+
+###
+
+### 3. Create Email Enquiry (Booking SOP Match)
+# Expected result: Matches 'appointment', 'reserve' -> Booking Enquiry SOP.
+POST {{baseUrl}}/enquiry
+Content-Type: application/json
+Accept: application/json
+
+{
+  "channel": "email",
+  "customer_name": "Jane Smith",
+  "message": "Hello, I want to reserve a slot and schedule an appointment for next Monday."
+}
+
+###
+
+### 4. Create Call Enquiry (Refund SOP Match)
+# Expected result: Matches 'refund', 'money back' -> Refund Request SOP.
+POST {{baseUrl}}/enquiry
+Content-Type: application/json
+Accept: application/json
+
+{
+  "channel": "call",
+  "customer_name": "David Miller",
+  "message": "Calling to check if I can get a refund for my cancelled booking."
+}
+
+###
+
+### 5. Create Enquiry with No SOP Match (Auto-Escalation)
+# Expected result: Matches no keywords -> status changes to escalated.
+POST {{baseUrl}}/enquiry
+Content-Type: application/json
+Accept: application/json
+
+{
+  "channel": "whatsapp",
+  "customer_name": "Robert Johnson",
+  "message": "Can you tell me if your offices are wheelchair accessible? Thank you."
+}
+
+###
+
+### 6. Create Enquiry with Validation Error (Validation testing)
+# Expected result: returns 422 with structured error listing missing or invalid fields.
+POST {{baseUrl}}/enquiry
+Content-Type: application/json
+Accept: application/json
+
+{
+  "channel": "invalid_channel",
+  "customer_name": "   ",
+  "message": ""
+}
+
+###
+
+### 7. Get Enquiry History (Replace {id} with a generated ID from step 2, 3, 4, or 5)
+# Make sure to run this a second after creation so background task completes.
+GET {{baseUrl}}/enquiry/enq_id_here/history
+Accept: application/json
+
+###
+
+### 8. Schedule a Follow-up (Replace {id} with a generated ID)
+POST {{baseUrl}}/enquiry/enq_id_here/followup
+Content-Type: application/json
+Accept: application/json
+
+{
+  "delay_in_minutes": 30,
+  "message_template": "Hi {{customer_name}}, just checking if you saw our suggested response?"
+}
+
+###
+
+### 9. Manually Escalate an Enquiry (Replace {id} with a generated ID)
+POST {{baseUrl}}/enquiry/enq_id_here/escalate
+Content-Type: application/json
+Accept: application/json
+
+{
+  "reason": "Customer requested to speak directly to a supervisor."
+}
