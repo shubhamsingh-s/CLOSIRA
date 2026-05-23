@@ -1,17 +1,21 @@
+import 'react-native-gesture-handler';
 import React from 'react';
 import { SafeAreaView, StyleSheet, StatusBar } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { Theme } from './src/theme/theme';
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor={Theme.colors.background} />
-        <AppNavigator />
-      </SafeAreaView>
-    </NavigationContainer>
+    <GestureHandlerRootView style={styles.container}>
+      <NavigationContainer>
+        <SafeAreaView style={styles.container}>
+          <StatusBar barStyle="light-content" backgroundColor={Theme.colors.background} />
+          <AppNavigator />
+        </SafeAreaView>
+      </NavigationContainer>
+    </GestureHandlerRootView>
   );
 }
 
