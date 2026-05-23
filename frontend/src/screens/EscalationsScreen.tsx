@@ -11,6 +11,11 @@ export const EscalationsScreen: React.FC<{ navigation: any }> = ({ navigation })
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const formatDate = (isoStr: string) => {
+    const d = new Date(isoStr);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
   const fetchEscalations = async (showLoader = true) => {
     if (showLoader) setLoading(true);
     const data = await api.getEnquiries();
