@@ -3,7 +3,7 @@ from typing import List, Literal, Optional, Any
 from pydantic import BaseModel, Field, field_validator
 
 class EnquiryCreate(BaseModel):
-    channel: Literal["whatsapp", "email", "call"]
+    channel: Literal["whatsapp", "email", "call", "facebook", "instagram", "sms"]
     customer_name: str = Field(..., min_length=1, max_length=100)
     message: str = Field(..., min_length=1, max_length=5000)
 
