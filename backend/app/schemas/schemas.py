@@ -7,6 +7,13 @@ class EnquiryCreate(BaseModel):
     customer_name: str = Field(..., min_length=1, max_length=100)
     message: str = Field(..., min_length=1, max_length=5000)
 
+    @field_validator("channel", mode="before")
+    @classmethod
+    def coerce_channel(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.strip().lower()
+        return v
+
     @field_validator("customer_name")
     @classmethod
     def name_must_not_be_blank(cls, v: str) -> str:
